@@ -18,6 +18,8 @@ module FARADS_VFCALC
 
     include("./blocking_fct_new.jl")
 
+    include("./ray_tri_intersect_fct.jl")
+
     export EmptyBuckets, Circles, OccBuckets
 
     export existing_vf!
@@ -41,6 +43,8 @@ module FARADS_VFCALC
     export blocking_vf_2elem_new
     export blocking_vf_2elem_bucket
     export blocking_vf_2elem_elem
+
+    export MoellerTrumbore
 
 
 end
