@@ -36,7 +36,7 @@ function MoellerTrumbore(v0, v1, v2, orig, dir)
 					is = @SVector [orig[1] + t * dir[1], 
 									orig[2] + t * dir[2], 
 									orig[3] + t * dir[3]]
-					println("        RT-Intersection at: ", is)
+					# println("        RT-Intersection at: ", is)
 					hit = 1
 				end
 			end

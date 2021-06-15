@@ -35,6 +35,7 @@ module FARADS_VFCALC
 
     export vf_elements_to_faces
     export quality_check_vf
+    export print_array
 
     # for testing
     export existing_vf_2elem, blocking_vf_2elem
