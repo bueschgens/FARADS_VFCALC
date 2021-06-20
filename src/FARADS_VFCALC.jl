@@ -34,6 +34,8 @@ module FARADS_VFCALC
     export calculate_vf!
 
     export vf_elements_to_faces
+    export vf_elements_to_parts
+
     export quality_check_vf
     export print_array
 

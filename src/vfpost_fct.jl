@@ -65,3 +65,37 @@ function quality_check_vf(mat)
 	println("    Mean: ", vmean, " / 1.00")
 end
 
+function vf_elements_to_parts(mym::Mesh3D, vfmat)
+	# Elements to Part viewfactors
+	n_parts = size(mym.elements2parts,1)
+
+	partarea = zeros(n_parts)
+	partvf = zeros(n_parts,n_parts)
+
+	for i = 1:n_parts
+		e11 = mym.elements2parts[i,3]
+		e12 = mym.elements2parts[i,4]
+		
+		partarea[i] = sum(mym.area[e11:e12,1])
+		
+		for j = 1:n_parts
+			e21 = mym.elements2parts[j,3]
+			e22 = mym.elements2parts[j,4]
+			
+			vfsplit = vfmat[e11:e12,e21:e22]
+			areasplit = zeros(mym.elements2parts[i,2],mym.elements2parts[j,2])
+			areasplit[:,1] = mym.area[e11:e12,1]
+			for k = 2:mym.elements2parts[j,2]
+				areasplit[:,k] = areasplit[:,1] # repeat probieren
+			end
+			vfsplit .*= areasplit
+			partvf[i,j] = sum(vfsplit) ./ partarea[i]
+
+		end
+	end
+
+	controlvf = sum(partvf,dims = 2)
+	print_array(controlvf)
+
+	return partvf
+end
