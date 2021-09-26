@@ -312,7 +312,10 @@ function bucketWalk_case3(p1, i1, p2, i2, p1p2, dir, bIdx_p1, bNr_p2, myb, mym, 
 		for i = 1:1:3
 			# println("dim ", i, " --> ", abs(bIdx_step[i] - bIdx_p1[i]), " / ", abs(bIdx_delta[i]))
 			if abs(bIdx_step[i] - bIdx_p1[i]) > abs(bIdx_delta[i])
-				error("Bucketwalk 3 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				# error("Bucketwalk 3 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				msg = "Bucketwalk 3 did not reach endbucket: i1 = " * string(i1) *  ", i2 = " * string(i2)
+				printstyled("WARNING: " * msg * "\n", color = :red)
+				return hasShadowing
 			end
         end
 	
@@ -503,7 +506,10 @@ function bucketWalk_case2(p1, i1, p2, i2, p1p2, dir, bIdx_p1, bNr_p2, myb, mym, 
 		for i = 1:1:3
 			# println("dim ", i, " --> ", abs(bIdx_step[i] - bIdx_p1[i]), " / ", abs(bIdx_delta[i]))
 			if abs(bIdx_step[i] - bIdx_p1[i]) > abs(bIdx_delta[i])
-				error("Bucketwalk 2 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				# error("Bucketwalk 2 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				msg = "Bucketwalk 2 did not reach endbucket: i1 = " * string(i1) *  ", i2 = " * string(i2)
+				printstyled("WARNING: " * msg * "\n", color = :red)
+				return hasShadowing
 			end
         end
 		
@@ -564,7 +570,10 @@ function bucketWalk_case1(p1, i1, p2, i2, p1p2, dir, bIdx_p1, bNr_p2, myb, mym, 
 		for i = 1:1:3
 			# println("dim ", i, " --> ", abs(bIdx_step[i] - bIdx_p1[i]), " / ", abs(bIdx_delta[i]))
 			if abs(bIdx_step[i] - bIdx_p1[i]) > abs(bIdx_delta[i])
-				error("Bucketwalk 1 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				# error("Bucketwalk 1 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				msg = "Bucketwalk 1 did not reach endbucket: i1 = " * string(i1) *  ", i2 = " * string(i2)
+				printstyled("WARNING: " * msg * "\n", color = :red)
+				return hasShadowing
 			end
         end
 
