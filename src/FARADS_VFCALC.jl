@@ -43,9 +43,11 @@ module FARADS_VFCALC
     export existing_vf_2elem, blocking_vf_2elem
 
     # new blocking
+    export blocking_vf_2elem_new2
     export blocking_vf_2elem_new
     export blocking_vf_2elem_bucket
     export blocking_vf_2elem_elem
+    export blocking_vf_new!
 
     export MoellerTrumbore
 

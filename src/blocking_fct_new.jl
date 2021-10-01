@@ -6,16 +6,17 @@ function blocking_vf_new!(vfmat, myb::VecOccBuckets, mym::VecMesh3D)
 	offset[1] = minimum(mym.nodes[1:mym.nnodes])
 	offset[2] = minimum(mym.nodes[mym.nnodes+1:2*mym.nnodes])
 	offset[3] = minimum(mym.nodes[2*mym.nnodes+1:3*mym.nnodes])
-	pass = zeros(1) # not usable in parallel
 	progress = Progress(n_elements, dt=1, barglyphs=BarGlyphs("[|| ]"), barlen=50)
+	max_steps = get_max_steps(myb)
+    buckets = Vector{Int64}(undef,max_steps)
 	for i1 = 1:1:n_elements
 		next!(progress)
-		#for i2 = (i1+1):1:n_elements
+		for i2 = (i1+1):1:n_elements
 		#Threads.@threads for i2 = (i1+1):1:n_elements
-		Threads.@threads for i2 = shuffle!(collect((i1+1):n_elements))
+		# Threads.@threads for i2 = shuffle!(collect((i1+1):n_elements))
             if vfmat[i1,i2] > 0 # --> vf existing
-                hasShadowing = bucketwalk_with_return!(i1, i2, mym, myb, offset, pass)
-                if hasShadowing == 1
+				nbuckets, hitelem = blocking_check_2elem(myb, mym, i1, i2, offset, buckets)
+                if hitelem != 0
                     # default 0, optional pass[1] -> hitten element
                     vfmat[i1, i2] = 0
                     vfmat[i2, i1] = 0
@@ -24,6 +25,53 @@ function blocking_vf_new!(vfmat, myb::VecOccBuckets, mym::VecMesh3D)
 		end
 	end
     println("blocking check done")
+end
+
+function blocking_check_2elem(myb::VecOccBuckets, mym::VecMesh3D, i1, i2, offset, buckets)
+	p1 = @SVector [mym.com[i1]-offset[1], 
+					mym.com[i1+1*mym.nelements]-offset[2], 
+					mym.com[i1+2*mym.nelements]-offset[3]]
+	p2 = @SVector [mym.com[i2]-offset[1], 
+					mym.com[i2+1*mym.nelements]-offset[2], 
+					mym.com[i2+2*mym.nelements]-offset[3]]
+	p1p2 = @SVector[p2[1]-p1[1], p2[2]-p1[2], p2[3]-p1[3]]
+	dir = SetDir(p1p2)
+	nbuckets = bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
+	hitelem = 0
+	for i = 1:nbuckets
+		bNr = buckets[i]
+		if myb.occupied[bNr] == 1 
+			hit, hitelem = RayTriangleMain(myb, bNr, mym, p1, p1p2, i1, i2, offset)
+			if hit == 1
+				# println("--> Element hitted: ", hitelem, " in bucket: ", bNr)
+				break
+			end
+		end
+	end
+	return nbuckets, hitelem
+end
+
+function blocking_vf_2elem_new2(myb::VecOccBuckets, mym::VecMesh3D, i1, i2)
+	# run the blocking calculation
+    # necessary here: offset on p1 and p2
+    # --> translate all nodes into positive coords
+	# --> for bucket numbering
+	# nodes @Ray triangle also with offset (pointA, pointB, pointC)
+	offset = zeros(3) # get node offset -> for all coords positiv
+	offset[1] = minimum(mym.nodes[1:mym.nnodes])
+	offset[2] = minimum(mym.nodes[mym.nnodes+1:2*mym.nnodes])
+	offset[3] = minimum(mym.nodes[2*mym.nnodes+1:3*mym.nnodes])
+    max_steps = get_max_steps(myb)
+    buckets = Vector{Int64}(undef,max_steps)
+	if existing_vf_2elem(mym, i1, i2)
+		nbuckets, hitelem = blocking_check_2elem(myb, mym, i1, i2, offset, buckets)
+	else
+		hitelem = 0
+		nbuckets = 0
+	end
+    println(buckets[1:nbuckets])
+    println("blocking check done for ", i1, " and ", i2)
+    return buckets[1:nbuckets], hitelem
 end
 
 function blocking_vf_2elem_new(myb::VecOccBuckets, mym::VecMesh3D, i1, i2)
@@ -52,10 +100,12 @@ function blocking_vf_2elem_new(myb::VecOccBuckets, mym::VecMesh3D, i1, i2)
 		nbuckets = bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
         for i = 1:nbuckets
             bNr = buckets[i]
-            hit, hitelem = RayTriangleMain(myb, bNr, mym, p1, p1p2, i1, i2, offset)
-			if hit == 1
-				println("--> Element hitted: ", hitelem, " in bucket: ", bNr)
-				break
+			if myb.occupied[bNr] == 1 
+				hit, hitelem = RayTriangleMain(myb, bNr, mym, p1, p1p2, i1, i2, offset)
+				if hit == 1
+					println("--> Element hitted: ", hitelem, " in bucket: ", bNr)
+					break
+				end
 			end
         end
 	end
@@ -161,7 +211,7 @@ function bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
                                 bIdx_p2[2] - bIdx_p1[2], 
                                 bIdx_p2[3] - bIdx_p1[3]]
         sum_dir = abs(dir[1]) + abs(dir[2]) + abs(dir[3])
-        println("bucket walk case: ", sum_dir)
+        # println("bucket walk case: ", sum_dir)
         if sum_dir == 3
             nb = bucketWalk_3D(buckets, p1, i1, p2, i2, dir, bIdx_p1, bNr_p2, myb, bIdx_delta)
         else 
