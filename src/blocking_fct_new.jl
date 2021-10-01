@@ -205,6 +205,7 @@ function bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
 
 	if bNr_p1 == bNr_p2 # Start Bucket == End Bucket?
 		# println("Start Bucket equals End Bucket")
+		nb = 0
     else
         # Start Bucket run to End Bucket
         bIdx_delta = @SVector [bIdx_p2[1] - bIdx_p1[1], 
