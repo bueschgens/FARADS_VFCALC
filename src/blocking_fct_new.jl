@@ -1,19 +1,21 @@
 function blocking_vf_new!(vfmat, myb::VecOccBuckets, mym::VecMesh3D)
 	# run the blocking calculation
 	n_elements = mym.nelements
-	println("starting blocking check with ",Threads.nthreads()," threads")
+	n_threads = Threads.nthreads()
+    println("starting blocking check with ",n_threads," threads")
 	offset = zeros(3) # get node offset -> for all coords positiv
 	offset[1] = minimum(mym.nodes[1:mym.nnodes])
 	offset[2] = minimum(mym.nodes[mym.nnodes+1:2*mym.nnodes])
 	offset[3] = minimum(mym.nodes[2*mym.nnodes+1:3*mym.nnodes])
 	progress = Progress(n_elements, dt=1, barglyphs=BarGlyphs("[|| ]"), barlen=50)
 	max_steps = get_max_steps(myb)
-    buckets = Vector{Int64}(undef,max_steps)
+    # buckets = Vector{Int64}(undef,max_steps)
+	buckets = Array{Int64,2}(undef,max_steps,n_threads)
 	for i1 = 1:1:n_elements
 		next!(progress)
-		for i2 = (i1+1):1:n_elements
-		#Threads.@threads for i2 = (i1+1):1:n_elements
-		# Threads.@threads for i2 = shuffle!(collect((i1+1):n_elements))
+		# for i2 = (i1+1):1:n_elements
+		# Threads.@threads for i2 = (i1+1):1:n_elements
+		Threads.@threads for i2 = shuffle!(collect((i1+1):n_elements))
             if vfmat[i1,i2] > 0 # --> vf existing
 				nbuckets, hitelem = blocking_check_2elem(myb, mym, i1, i2, offset, buckets)
                 if hitelem != 0
@@ -39,8 +41,8 @@ function blocking_check_2elem(myb::VecOccBuckets, mym::VecMesh3D, i1, i2, offset
 	nbuckets = bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
 	hitelem = 0
 	for i = 1:nbuckets
-		bNr = buckets[i]
-		if myb.occupied[bNr] == 1 
+		bNr = buckets[i,Threads.threadid()]
+		if myb.occupied[bNr] == 1
 			hit, hitelem = RayTriangleMain(myb, bNr, mym, p1, p1p2, i1, i2, offset)
 			if hit == 1
 				# println("--> Element hitted: ", hitelem, " in bucket: ", bNr)
@@ -200,7 +202,7 @@ function bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
 	# bucket number here +1 (comparable to c)
 	# println("Start bucket Nr. ", bNr_p1, "  / End bucket Nr. ", bNr_p2)
 
-    buckets[1] = bNr_p1
+    buckets[1,Threads.threadid()] = bNr_p1
     nbuckets = 1
 
 	if bNr_p1 == bNr_p2 # Start Bucket == End Bucket?
@@ -333,7 +335,7 @@ function bucketWalk_3D(buckets, p1, i1, p2, i2, dir, bIdx_p1, bNr_p2, myb, bIdx_
 					(bIdx_step[3] * myb.n_XYZ[1] * myb.n_XYZ[2])
 		bNr_step = bNr_step + 1 # here: bNr + 1
         # println("Next Bucket: ", bNr_step)
-        buckets[count+1] = bNr_step
+        buckets[count+1,Threads.threadid()] = bNr_step
 
         if bNr_step == bNr_p2
             # println("End Bucket reached: ", bNr_p2)
@@ -516,7 +518,7 @@ function bucketWalk_2D(buckets, p1, i1, p2, i2, dir, bIdx_p1, bNr_p2, myb, bIdx_
 					(bIdx_step[3] * myb.n_XYZ[1] * myb.n_XYZ[2])
 		bNr_step = bNr_step + 1 # here: bNr + 1
         # println("Next Bucket: ", bNr_step)
-        buckets[count+1] = bNr_step
+        buckets[count+1,Threads.threadid()] = bNr_step
 
         if bNr_step == bNr_p2
             # println("End Bucket reached: ", bNr_p2)
@@ -568,7 +570,7 @@ function bucketWalk_1D(buckets, p1, i1, p2, i2, dir, bIdx_p1, bNr_p2, myb, bIdx_
 					(bIdx_step[3] * myb.n_XYZ[1] * myb.n_XYZ[2])
 		bNr_step = bNr_step + 1 # muss weil aus c so
         # println("Next Bucket: ", bNr_step)
-        buckets[count+1] = bNr_step
+        buckets[count+1,Threads.threadid()] = bNr_step
 
         if bNr_step == bNr_p2
             # println("End Bucket reached: ", bNr_p2)
