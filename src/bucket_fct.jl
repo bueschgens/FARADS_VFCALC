@@ -14,6 +14,22 @@ function buckets_main(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = (1:size(m
     return OccBuckets(b_empty.nodes, b_empty.volumes, bstatus, b2p, b2e, b_empty.delta, b_empty.n_buckets_dir)
 end
 
+function buckets_main_parallel(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = (1:size(mym.elements2parts,1))) where T1<:AbstractFloat
+    println("starting bucket creation and sorting")
+    # create empty buckets
+    b_empty = create_buckets(mym, delta_XYZ)
+    println("    created ", size(b_empty.volumes,1), " buckets")
+    # circle around elements
+    circles = get_circlepoints(mym)
+    # occupation of buckets
+    # blockparts determines which parts participate in blocking
+    tol = 0 # tolerance for bucket coords
+    b2p = check_bucket_and_parts(b_empty, mym, tol, blockparts)
+    b2e, bstatus = check_bucket_and_elements_parallel(b_empty, mym, b2p, circles, tol)
+    println("bucket creation and sorting done")
+    return OccBuckets(b_empty.nodes, b_empty.volumes, bstatus, b2p, b2e, b_empty.delta, b_empty.n_buckets_dir)
+end
+
 function create_buckets(mym::Mesh3D{T1,T2}, delta_XYZ::Vector{T1}) where {T1<:AbstractFloat, T2<:Integer}
     # get all necessary data based on Mesh3D to prepare bucket creation
     # get min and max dimensions of Mesh3D
@@ -213,6 +229,98 @@ function check_bucket_and_elements(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, bucket
     println("    checks total: ",checks_tot)
     println("    com inside bucket: ",checks_com, " / others: ",checks_not_com)
     println("    others --> near bucket: ", checks_near, " --> circle inside: ", checks_circle)
+    return buckets2elements, bucketstatus
+end
+
+function check_bucket_and_elements_parallel(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, buckets2parts, circles, tolerance) where {T1<:AbstractFloat, T2<:Integer}
+    # check if elements of penetrating parts penetrate bucket
+    n_buckets = size(myb.volumes,1)
+    n_parts = size(mym.elements2parts,1)
+    n_points_per_element = size(circles.elements,2)
+    buckets2elements = Vector{Vector{T2}}(undef,n_buckets)
+    bucketstatus = zeros(T2, n_buckets) # 0(empty) or 1(occupied)
+    n_threads = Threads.nthreads()
+    println("starting blocking check with ",n_threads," threads")
+    temp_b2e = Array{T2,2}(undef,500,n_threads)
+    checks_tot = zeros(T2,n_threads)
+    checks_com = zeros(T2,n_threads)
+    checks_not_com = zeros(T2,n_threads)
+    checks_near = zeros(T2,n_threads)
+    checks_circle = zeros(T2,n_threads)
+    progress = Progress(n_buckets, dt=1, barglyphs=BarGlyphs("[|| ]"), barlen=50)
+    for i_b = 1:n_buckets
+        next!(progress)
+        # get min and max coords of bucket
+        min_bucket_XYZ = minimum(myb.nodes[myb.volumes[i_b,:],1:3], dims = 1)
+        max_bucket_XYZ = maximum(myb.nodes[myb.volumes[i_b,:],1:3], dims = 1)
+        # small tolerance with bucket coords
+        min_bucket_XYZ .-= tolerance
+        max_bucket_XYZ .+= tolerance
+        # prepare for circle check
+        b_com = ((max_bucket_XYZ[:] .+ min_bucket_XYZ[:]) ./ 2)
+        b_n = @view myb.nodes[myb.volumes[i_b,1],:]
+        # go through all parts penetrating the bucket
+        hit = zeros(T2,n_threads)
+        for i_p in buckets2parts[i_b]
+            n1 = mym.nodes2parts[i_p,3]
+            n2 = mym.nodes2parts[i_p,4]
+            nodes_of_part = @view mym.nodes[n1:n2,1:3]
+            e1 = mym.elements2parts[i_p,3]
+            e2 = mym.elements2parts[i_p,4]
+            # go through all elements of part
+            # Threads.@threads for i_e = e1:e2
+            Threads.@threads for i_e = shuffle!(collect(e1:e2))
+                checks_tot[Threads.threadid()] += 1
+                # first check com
+                e_com = @view mym.com[i_e,:]
+                if is_point_inside_quader(e_com, min_bucket_XYZ, max_bucket_XYZ)
+                    checks_com[Threads.threadid()] += 1
+                    # com inside bucket
+                    hit[Threads.threadid()] += 1
+                    temp_b2e[hit[Threads.threadid()],Threads.threadid()] = i_e
+                else # check if element is near bucket
+                    checks_not_com[Threads.threadid()] += 1
+                    # presorting of the parts elements
+                    e_nA = @view nodes_of_part[mym.elements[i_e,1],:]
+                    e_nB = @view nodes_of_part[mym.elements[i_e,2],:]
+                    e_nC = @view nodes_of_part[mym.elements[i_e,3],:]
+                    if is_element_near_bucket(e_com, e_nA, e_nB, e_nC, b_com, b_n)
+                        # if near check all points of circle
+                        checks_near[Threads.threadid()] += 1
+                        # TO DO: create cirle around element in situ
+                        for i_points = 1:n_points_per_element
+                            point = @view circles.nodes[circles.elements[i_e,i_points],:]
+                            if is_point_inside_quader(point, min_bucket_XYZ, max_bucket_XYZ)
+                                # circle point inside bucket
+                                checks_circle[Threads.threadid()] += 1
+                                hit[Threads.threadid()] += 1
+                                temp_b2e[hit[Threads.threadid()],Threads.threadid()] = i_e
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if sum(hit) > 0
+            bucketstatus[i_b,1] = 1
+            temp_b2e_all = Vector{T2}(undef,sum(hit))
+            i1 = 0
+            i2 = 0
+            for i = 1:n_threads
+                i1 = i2 + 1
+                i2 = i2 + hit[i]
+                temp_b2e_all[i1:i2] = temp_b2e[1:hit[i],i]
+            end
+            buckets2elements[i_b] = temp_b2e_all
+        else
+            buckets2elements[i_b] = []
+        end
+    end
+    println("Result checking buckets and elements")
+    println("    checks total: ",sum(checks_tot))
+    println("    com inside bucket: ",sum(checks_com), " / others: ",sum(checks_not_com))
+    println("    others --> near bucket: ", sum(checks_near), " --> circle inside: ", sum(checks_circle))
     return buckets2elements, bucketstatus
 end
 

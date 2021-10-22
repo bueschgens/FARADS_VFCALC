@@ -29,6 +29,8 @@ module FARADS_VFCALC
     # export check_bucket_and_parts, check_bucket_and_elements
     export get_elements_inside_bucket
 
+    export buckets_main_parallel
+
     export blocking_vf!
 
     export calculate_vf!
