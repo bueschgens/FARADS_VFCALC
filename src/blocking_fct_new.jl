@@ -86,6 +86,7 @@ function blocking_vf_2elem_new(myb::VecOccBuckets, mym::VecMesh3D, i1, i2)
 	offset[1] = minimum(mym.nodes[1:mym.nnodes])
 	offset[2] = minimum(mym.nodes[mym.nnodes+1:2*mym.nnodes])
 	offset[3] = minimum(mym.nodes[2*mym.nnodes+1:3*mym.nnodes])
+	@show offset
     max_steps = get_max_steps(myb)
     buckets = Vector{Int64}(undef,max_steps)
     nbuckets = 0
@@ -628,7 +629,8 @@ function RayTriangleMain(myb, bNr, mym, orig, dir, i1, i2, offset)
 								mym.nodes[nodeoffset - 1 + nodes3+2*mym.nnodes]-offset[3]]
 
 			# println(i_elem, " ", pointA, " ", pointB, " ", pointC)
-			hit = MoellerTrumbore(pointA, pointC, pointB, orig, dir)
+			println("checking now ", i_elem)
+			hit = MoellerTrumbore_print(pointA, pointC, pointB, orig, dir)
 
 			if hit == 1
 				hit_element = i_elem
