@@ -629,8 +629,8 @@ function RayTriangleMain(myb, bNr, mym, orig, dir, i1, i2, offset)
 								mym.nodes[nodeoffset - 1 + nodes3+2*mym.nnodes]-offset[3]]
 
 			# println(i_elem, " ", pointA, " ", pointB, " ", pointC)
-			println("checking now ", i_elem)
-			hit = MoellerTrumbore_print(pointA, pointC, pointB, orig, dir)
+			# println("checking now ", i_elem)
+			hit = MoellerTrumbore(pointA, pointC, pointB, orig, dir)
 
 			if hit == 1
 				hit_element = i_elem

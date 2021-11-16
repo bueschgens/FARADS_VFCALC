@@ -198,7 +198,7 @@ function RayTriangleMain(myb, bNr, mym, orig, dir, i1, i2, offset, pass)
 
 			if hit == 1
 				hit_element = i_elem
-				println("Hitten element: ", hit_element)
+				# println("Hitten element: ", hit_element)
 				# pass[1] = hit_element
 				return hit
 			end
