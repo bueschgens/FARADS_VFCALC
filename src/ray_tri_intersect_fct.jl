@@ -50,7 +50,7 @@ function MoellerTrumbore_print(v0, v1, v2, orig, dir)
 	# @show v1
 	# @show v2
 	# @show orig
-	# @show dir
+	@show dir
 	hit = 0
 	EPSILON = 1E-10
 	edge1 = @SVector [v1[1]-v0[1], v1[2]-v0[2], v1[3]-v0[3]]
@@ -60,7 +60,7 @@ function MoellerTrumbore_print(v0, v1, v2, orig, dir)
 						(dir[1]*edge2[2]) - (dir[2]*edge2[1])]
 
 	det = edge1[1]*pvec[1] + edge1[2]*pvec[2] + edge1[3]*pvec[3]
-	# @show det
+	@show det
 	println("    starting MoellerTrumbore algorithm")
 	if det < EPSILON
 		println("        no intersection: det < EPSILON")
