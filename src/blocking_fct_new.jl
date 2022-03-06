@@ -119,6 +119,7 @@ end
 
 function blocking_vf_2elem_bucket(myb::VecOccBuckets, mym::VecMesh3D, i1, i2, bNr)
 	# run the blocking calculation
+	# check element combination with elements inside given bucket bNr
     # necessary here: offset on p1 and p2
     # --> translate all nodes into positive coords
 	# --> for bucket numbering
@@ -148,6 +149,7 @@ end
 
 function blocking_vf_2elem_elem(mym::VecMesh3D, i1, i2, ib)
 	# run the blocking calculation
+	# check element combination with given element ib
     # necessary here: offset on p1 and p2
     # --> translate all nodes into positive coords
 	# --> for bucket numbering
