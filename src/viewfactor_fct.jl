@@ -35,6 +35,8 @@ function calculate_vf!(vfmat, refinement, mym::VecMesh3D{T1,T2}) where {T1<:Abst
                 else
                     pair_refine = refinement
                 end
+                # vfmat[i1, i2] = pair_refine
+                # vfmat[i2, i1] = pair_refine
                 if pair_refine == 0 # --> without refinement
                     vfmat[i1, i2] = phi1 * phi2 * mym.area[i2] / (pi * length_s * length_s)
                     vfmat[i2, i1] = phi1 * phi2 * mym.area[i1] / (pi * length_s * length_s)
