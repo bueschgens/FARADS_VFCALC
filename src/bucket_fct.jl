@@ -9,7 +9,7 @@ function buckets_main(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = (1:size(m
     # blockparts determines which parts participate in blocking
     tol = 0 # tolerance for bucket coords
     b2p = check_bucket_and_parts(b_empty, mym, tol, blockparts)
-    b2e, bstatus = check_bucket_and_elements(b_empty, mym, b2p, circles, tol)
+    b2e, bstatus = check_bucket_and_elements(b_empty, mym, b2p, circles, tol, bucketpuffer = 2000)
     println("bucket creation and sorting done")
     return OccBuckets(b_empty.nodes, b_empty.volumes, bstatus, b2p, b2e, b_empty.delta, b_empty.n_buckets_dir)
 end
@@ -25,7 +25,7 @@ function buckets_main_parallel(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = 
     # blockparts determines which parts participate in blocking
     tol = 0 # tolerance for bucket coords
     b2p = check_bucket_and_parts(b_empty, mym, tol, blockparts)
-    b2e, bstatus = check_bucket_and_elements_parallel(b_empty, mym, b2p, circles, tol)
+    b2e, bstatus = check_bucket_and_elements_parallel(b_empty, mym, b2p, circles, tol, bucketpuffer = 2000)
     println("bucket creation and sorting done")
     return OccBuckets(b_empty.nodes, b_empty.volumes, bstatus, b2p, b2e, b_empty.delta, b_empty.n_buckets_dir)
 end
@@ -151,14 +151,14 @@ function check_bucket_and_parts(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, tolerance
     return buckets2parts
 end
 
-function check_bucket_and_elements(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, buckets2parts, circles, tolerance) where {T1<:AbstractFloat, T2<:Integer}
+function check_bucket_and_elements(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, buckets2parts, circles, tolerance; bucketpuffer = 500) where {T1<:AbstractFloat, T2<:Integer}
     # check if elements of penetrating parts penetrate bucket
     n_buckets = size(myb.volumes,1)
     n_parts = size(mym.elements2parts,1)
     n_points_per_element = size(circles.elements,2)
     buckets2elements = Vector{Vector{T2}}(undef,n_buckets)
     bucketstatus = zeros(T2, n_buckets) # 0(empty) or 1(occupied)
-    temp_b2e = Vector{T2}(undef,500)
+    temp_b2e = Vector{T2}(undef,bucketpuffer) # default 500
     checks_tot = 0
     checks_com = 0
     checks_not_com = 0
@@ -232,7 +232,7 @@ function check_bucket_and_elements(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, bucket
     return buckets2elements, bucketstatus
 end
 
-function check_bucket_and_elements_parallel(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, buckets2parts, circles, tolerance) where {T1<:AbstractFloat, T2<:Integer}
+function check_bucket_and_elements_parallel(myb::EmptyBuckets, mym::Mesh3D{T1,T2}, buckets2parts, circles, tolerance; bucketpuffer = 500) where {T1<:AbstractFloat, T2<:Integer}
     # check if elements of penetrating parts penetrate bucket
     n_buckets = size(myb.volumes,1)
     n_parts = size(mym.elements2parts,1)
@@ -241,7 +241,7 @@ function check_bucket_and_elements_parallel(myb::EmptyBuckets, mym::Mesh3D{T1,T2
     bucketstatus = zeros(T2, n_buckets) # 0(empty) or 1(occupied)
     n_threads = Threads.nthreads()
     println("starting blocking check with ",n_threads," threads")
-    temp_b2e = Array{T2,2}(undef,500,n_threads)
+    temp_b2e = Array{T2,2}(undef,bucketpuffer,n_threads)
     checks_tot = zeros(T2,n_threads)
     checks_com = zeros(T2,n_threads)
     checks_not_com = zeros(T2,n_threads)
