@@ -1,4 +1,4 @@
-function buckets_main(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = (1:size(mym.elements2parts,1))) where T1<:AbstractFloat
+function buckets_main(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = (1:size(mym.elements2parts,1)), bucketpuffer = 4000) where T1<:AbstractFloat
     println("starting bucket creation and sorting")
     # create empty buckets
     b_empty = create_buckets(mym, delta_XYZ)
@@ -9,7 +9,7 @@ function buckets_main(mym::Mesh3D, delta_XYZ::Vector{T1}; blockparts = (1:size(m
     # blockparts determines which parts participate in blocking
     tol = 0 # tolerance for bucket coords
     b2p = check_bucket_and_parts(b_empty, mym, tol, blockparts)
-    b2e, bstatus = check_bucket_and_elements(b_empty, mym, b2p, circles, tol, bucketpuffer = 4000)
+    b2e, bstatus = check_bucket_and_elements(b_empty, mym, b2p, circles, tol, bucketpuffer = bucketpuffer)
     println("bucket creation and sorting done")
     return OccBuckets(b_empty.nodes, b_empty.volumes, bstatus, b2p, b2e, b_empty.delta, b_empty.n_buckets_dir)
 end
