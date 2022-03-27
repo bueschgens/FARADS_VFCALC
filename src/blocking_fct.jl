@@ -56,9 +56,28 @@ function RunThroughBuckets(i1, i2, mym, myb, offset, pass)
 	dir = SetDir(p1p2)
 
 	# println("Run between ", i1, " and ", i2)
-	
-	bNr_p1, bIdx_p1 = getBucketNumberFromPoint(p1, dir, myb, 1)
-	bNr_p2, bIdx_p2 = getBucketNumberFromPoint(p2, dir, myb, 2)
+
+	sum_dir = abs(dir[1]) + abs(dir[2]) + abs(dir[3])
+	if sum_dir == 2
+		# added as fix - necessary when 2d walk but both coords are multiple of bucket delta and slightly different
+		absDir = @SVector [abs(dir[1]), abs(dir[2]), abs(dir[3])]
+		zero = argmin(absDir)
+		if zero == 1
+			p1_new = @SVector [0.5*(p1[3]+p2[3]), p1[2], p1[3]]
+			p2_new = @SVector [0.5*(p1[3]+p2[3]), p2[2], p2[3]]
+		elseif zero == 2
+			p1_new = @SVector [p1[1], 0.5*(p1[3]+p2[3]), p1[3]]
+			p2_new = @SVector [p2[1], 0.5*(p1[3]+p2[3]), p2[3]]
+		else
+			p1_new = @SVector [p1[1], p1[2], 0.5*(p1[3]+p2[3])]
+			p2_new = @SVector [p2[1], p2[2], 0.5*(p1[3]+p2[3])]
+		end
+		bNr_p1, bIdx_p1 = getBucketNumberFromPoint(p1_new, dir, myb, 1)
+		bNr_p2, bIdx_p2 = getBucketNumberFromPoint(p2_new, dir, myb, 2)
+	else
+		bNr_p1, bIdx_p1 = getBucketNumberFromPoint(p1, dir, myb, 1)
+		bNr_p2, bIdx_p2 = getBucketNumberFromPoint(p2, dir, myb, 2)
+	end
 	# bucket number ist hier +1 im Vergleich zu c
 	# println("Start bucket Nr. ", bNr_p1, "  / End bucket Nr. ", bNr_p2)
 
