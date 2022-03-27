@@ -199,9 +199,29 @@ function get_max_steps(myb::VecOccBuckets)
 end
 
 function bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
-	
-	bNr_p1, bIdx_p1 = getBucketNumberFromPoint(p1, dir, myb, 1)
-	bNr_p2, bIdx_p2 = getBucketNumberFromPoint(p2, dir, myb, 2)
+
+	sum_dir = abs(dir[1]) + abs(dir[2]) + abs(dir[3])
+
+	if sum_dir == 2
+		# added as fix - necessary when 2d walk but both coords are multiple of bucket delta and slightly different
+		absDir = @SVector [abs(dir[1]), abs(dir[2]), abs(dir[3])]
+		zero = argmin(absDir)
+		if zero == 1
+			p1_new = @SVector [0.5*(p1[3]+p2[3]), p1[2], p1[3]]
+			p2_new = @SVector [0.5*(p1[3]+p2[3]), p2[2], p2[3]]
+		elseif zero == 2
+			p1_new = @SVector [p1[1], 0.5*(p1[3]+p2[3]), p1[3]]
+			p2_new = @SVector [p2[1], 0.5*(p1[3]+p2[3]), p2[3]]
+		else
+			p1_new = @SVector [p1[1], p1[2], 0.5*(p1[3]+p2[3])]
+			p2_new = @SVector [p2[1], p2[2], 0.5*(p1[3]+p2[3])]
+		end
+		bNr_p1, bIdx_p1 = getBucketNumberFromPoint(p1_new, dir, myb, 1)
+		bNr_p2, bIdx_p2 = getBucketNumberFromPoint(p2_new, dir, myb, 2)
+	else
+		bNr_p1, bIdx_p1 = getBucketNumberFromPoint(p1, dir, myb, 1)
+		bNr_p2, bIdx_p2 = getBucketNumberFromPoint(p2, dir, myb, 2)
+	end
 	# bucket number here +1 (comparable to c)
 	# println("Start bucket Nr. ", bNr_p1, "  / End bucket Nr. ", bNr_p2)
 
@@ -216,7 +236,7 @@ function bucketwalk_with_return!(buckets, i1, i2, myb, p1, p2, dir)
         bIdx_delta = @SVector [bIdx_p2[1] - bIdx_p1[1], 
                                 bIdx_p2[2] - bIdx_p1[2], 
                                 bIdx_p2[3] - bIdx_p1[3]]
-        sum_dir = abs(dir[1]) + abs(dir[2]) + abs(dir[3])
+		# sum_dir = abs(dir[1]) + abs(dir[2]) + abs(dir[3])
         # println("bucket walk case: ", sum_dir)
         if sum_dir == 3
             nb = bucketWalk_3D(buckets, p1, i1, p2, i2, dir, bIdx_p1, bNr_p2, myb, bIdx_delta)
@@ -532,7 +552,9 @@ function bucketWalk_2D(buckets, p1, i1, p2, i2, dir, bIdx_p1, bNr_p2, myb, bIdx_
 		for i = 1:1:3
 			# println("dim ", i, " --> ", abs(bIdx_step[i] - bIdx_p1[i]), " / ", abs(bIdx_delta[i]))
 			if abs(bIdx_step[i] - bIdx_p1[i]) > abs(bIdx_delta[i])
-				error("Bucketwalk 2 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				#error("Bucketwalk 2 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				println("ERROR: Bucketwalk 2 did not reach endbucket: i1 = ", i1, ", i2 = ", i2)
+				return count
 			end
         end
 		
