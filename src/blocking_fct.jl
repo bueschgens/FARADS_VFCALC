@@ -1,4 +1,4 @@
-function blocking_vf!(vfmat, myb::VecOccBuckets, mym::VecMesh3D)
+function blocking_vf!(vfmat, myb::VecOccBuckets, mym::VecMesh3D; b2fix = true)
 	# run the blocking calculation
 	n_elements = mym.nelements
 	println("starting blocking check with ",Threads.nthreads()," threads")
@@ -14,7 +14,7 @@ function blocking_vf!(vfmat, myb::VecOccBuckets, mym::VecMesh3D)
 		#Threads.@threads for i2 = (i1+1):1:n_elements
 		Threads.@threads for i2 = shuffle!(collect((i1+1):n_elements))
             if vfmat[i1,i2] > 0 # --> vf existing
-                hasShadowing = RunThroughBuckets(i1, i2, mym, myb, offset, pass)
+                hasShadowing = RunThroughBuckets(i1, i2, mym, myb, offset, pass; b2fix = b2fix)
                 if hasShadowing == 1
                     # default 0, optional pass[1] -> hitten element
                     vfmat[i1, i2] = 0
@@ -41,7 +41,7 @@ function blocking_vf_2elem(myb::VecOccBuckets, mym::VecMesh3D, i1, i2)
     println("blocking check done for ", i1, " and ", i2)
 end
 
-function RunThroughBuckets(i1, i2, mym, myb, offset, pass)
+function RunThroughBuckets(i1, i2, mym, myb, offset, pass; b2fix = b2fix)
 
 	# hier der offset rein, damit alle node-coordinaten positiv
 	# wichtig für ermittlung der bucket number
@@ -58,7 +58,7 @@ function RunThroughBuckets(i1, i2, mym, myb, offset, pass)
 	# println("Run between ", i1, " and ", i2)
 
 	sum_dir = abs(dir[1]) + abs(dir[2]) + abs(dir[3])
-	if sum_dir == 2
+	if sum_dir == 2 && b2fix == true
 		# added as fix - necessary when 2d walk but both coords are multiple of bucket delta and slightly different
 		absDir = @SVector [abs(dir[1]), abs(dir[2]), abs(dir[3])]
 		zero = argmin(absDir)
