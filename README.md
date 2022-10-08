@@ -6,8 +6,8 @@ FARADS provides a framework for calculating view factors of arbitrary three-dime
 
 other modules of FARADS:
 - FARADS_GEOM
+- FARADS_MESHING
 - FARADS_PLOT
-- FARADS_VFCALC
 - FARADS_QRAD
 
 This module provides functions and types for:
